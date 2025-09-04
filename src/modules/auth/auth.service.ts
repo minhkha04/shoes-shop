@@ -1,5 +1,5 @@
 import { Provider } from './enums/provider.enum';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { SiginInDto } from './dto/sigin-in.dto';
 import { SignUpDto } from './dto/sigin-up.dto';
@@ -12,9 +12,13 @@ import { SendOtpDto } from './dto/send-otp.dto';
 import { EmailOtpService } from '../email-otp/email-otp.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { OtpType } from './enums/otpType.enum';
+import { OAuth2Client } from 'google-auth-library';
+import axios from 'axios';
 
 @Injectable()
 export class AuthService {
+
+  private googleClient: OAuth2Client;
 
   constructor(
     private readonly configService: ConfigService,
@@ -22,7 +26,9 @@ export class AuthService {
     private readonly prisma: PrismaClient,
     private readonly sendMail: SendMailService,
     private readonly emailOtpService: EmailOtpService
-  ) { }
+  ) {
+    this.googleClient = new OAuth2Client(this.configService.get('GOOGLE_CLIENT_ID'));
+  }
 
   private async signInWithEmailAndPassword(request: SiginInDto) {
 
@@ -46,19 +52,95 @@ export class AuthService {
     return { token: await generateToken(user) };
   }
 
-  // TODO: Implement OAuth2 flow for Google and Facebook
   private async signInWithGoogle(request: SiginInDto) {
-    if (!request.accessToken) {
+    let { accessToken } = request;
+    if (!accessToken) {
       throw new HttpException('Access token is required', HttpStatus.BAD_REQUEST);
     }
-    return "Sign in with Google";
+    const ticket = await this.googleClient.verifyIdToken({
+      idToken: accessToken,
+      audience: this.configService.get('GOOGLE_CLIENT_ID'),
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload) throw new HttpException('Invalid Google token', HttpStatus.UNAUTHORIZED);
+
+    const email = payload.email!;
+    const fullName = payload.name ?? '';
+    const picture = payload.picture;
+
+    console.log(picture)
+
+    let user = await this.prisma.users.findUnique({
+      where: { email_account_type: { email, account_type: 'GOOGLE' } },
+    });
+
+    if (!user) {
+      user = await this.prisma.users.create({
+        data: {
+          email,
+          fullName,
+          account_type: 'GOOGLE',
+          role: 'USER',
+          avatarUrl: picture
+        },
+      });
+    }
+
+    return { token: await generateToken(user) };
   }
 
   private async signInWithFacebook(request: SiginInDto) {
-    if (!request.accessToken) {
+    let { accessToken } = request;
+    if (!accessToken) {
       throw new HttpException('Access token is required', HttpStatus.BAD_REQUEST);
     }
-    return "Sign in with Facebook";
+
+    const url = `https://graph.facebook.com/me`;
+    const params = {
+      fields: 'id,name,email,picture',
+      access_token: accessToken,
+    };
+
+    let fbUser: {
+      id: string;
+      email?: string;
+      name?: string;
+      picture?: { data?: { url?: string } };
+    };
+
+    try {
+      const { data } = await axios.get(url, { params, timeout: 5000 });
+      fbUser = data;
+    } catch (e) {
+      throw new UnauthorizedException('Invalid Facebook access token');
+    }
+
+    const email = fbUser.email
+    const fullName = fbUser.name;
+    const avatarUrl = fbUser.picture?.data?.url;
+
+    if (!email || !fullName || !avatarUrl) {
+      throw new UnauthorizedException('Email permission is required');
+    }
+
+    let user = await this.prisma.users.findUnique({
+      where: { email_account_type: { email, account_type: 'FACEBOOK' } },
+    });
+
+    if (!user) {
+      user = await this.prisma.users.create({
+        data: {
+          email,
+          fullName,
+          avatarUrl,
+          account_type: 'FACEBOOK',
+          role: 'USER',
+        },
+      });
+    }
+
+    return { token: await generateToken(user) };
   }
 
   async signIn(requset: SiginInDto, provider: Provider) {
@@ -133,7 +215,7 @@ export class AuthService {
       default:
         throw new Error('Invalid OTP type');
     }
-    
+
 
     await this.sendMail.sendMail({
       to: email,
