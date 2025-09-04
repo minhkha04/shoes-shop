@@ -18,6 +18,12 @@ model users {
   @@unique([email, account_type], map: "uniq_email_account_type")
 }
 
+model email_otp {
+  email        String    @id @db.VarChar(50)
+  otp          String?   @db.VarChar(255)
+  expired_time DateTime? @db.DateTime(0)
+}
+
 enum users_role {
   ADMIN
   USER

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Query, ParseEnumPipe, HttpCode, Get, UseGuards, Param } from '@nestjs/common';
+import { Controller, Post, Body, Query, ParseEnumPipe, HttpCode, Get, UseGuards, Param, Put } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SiginInDto } from './dto/sigin-in.dto';
 import { SignUpDto } from './dto/sigin-up.dto';
@@ -8,11 +8,15 @@ import { AuthGuard } from '@nestjs/passport';
 import { Role } from './enums/roles.enum';
 import { Roles } from './decorators/roles.decorator';
 import { RolesGuard } from './config/roles.guard';
+import { SendMailService } from '../send-mail/send-mail.service';
+import { SendOtpDto } from './dto/send-otp.dto';
+import { OtpType } from './enums/otpType.enum';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService, private readonly sendMail: SendMailService) { }
 
   @HttpCode(200)
   @Post('sign-in')
@@ -27,6 +31,7 @@ export class AuthController {
     return this.authService.signUp(signUpDto);
   }
 
+  @HttpCode(200)
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @Get('refresh-token/:token')
@@ -35,12 +40,25 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
   @Get('test')
   @Roles(Role.USER)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  test() {
+  async test() {
     return "test";
   }
 
+
+  @HttpCode(200)
+  @Post('send-otp')
+  @ApiQuery({ name: 'otpType', enum: OtpType, required: true })
+  sendOtp(@Body() request: SendOtpDto, @Query('otpType') otpType: OtpType) {
+    console.log(otpType);
+    return this.authService.sendOtp(request, otpType);
+  }
+
+  @HttpCode(200)
+  @Put('reset-password')
+  resetPassword(@Body() request: ResetPasswordDto) {
+    return this.authService.resetPassword(request);
+  }
 }

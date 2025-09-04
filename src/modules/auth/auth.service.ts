@@ -7,7 +7,11 @@ import * as bcrypt from 'bcrypt';
 import { generateToken } from './helper/util';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { JwtStrategy } from './strategy/jwt.strategy';
+import { SendMailService } from '../send-mail/send-mail.service';
+import { SendOtpDto } from './dto/send-otp.dto';
+import { EmailOtpService } from '../email-otp/email-otp.service';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { OtpType } from './enums/otpType.enum';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +20,8 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaClient,
+    private readonly sendMail: SendMailService,
+    private readonly emailOtpService: EmailOtpService
   ) { }
 
   private async signInWithEmailAndPassword(request: SiginInDto) {
@@ -69,7 +75,7 @@ export class AuthService {
   }
 
   async signUp(request: SignUpDto) {
-    let { email, password, fullName, code } = request;
+    let { email, password, fullName, otp } = request;
     let userExist = await this.prisma.users.findUnique({
       where: { email_account_type: { email: email, account_type: 'EMAIL' } },
     });
@@ -79,9 +85,7 @@ export class AuthService {
     }
 
     // For simplicity, we use a fixed code. In real-world, this should be dynamic.
-    if (code !== 123456) {
-      throw new HttpException('Invalid code', HttpStatus.BAD_REQUEST);
-    }
+    await this.emailOtpService.verifyOtp(email, otp.toString());
     let user = await this.prisma.users.create({
       data: {
         email: email,
@@ -106,6 +110,55 @@ export class AuthService {
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
+    return { token: await generateToken(user) };
+  }
+
+  async sendOtp(request: SendOtpDto, otpType: OtpType) {
+    let html: string;
+    const { email } = request;
+    const otp = await this.emailOtpService.generateOtp(email);
+    switch (otpType) {
+      case OtpType.REGISTER_ACCOUNT:
+        html = `Your OTP code for registering account is ${otp}. It will expire in 5 minutes.`;
+        break;
+      case OtpType.RESET_PASSWORD:
+        let user = await this.prisma.users.findUnique({
+          where: { email_account_type: { email: email, account_type: 'EMAIL' } },
+        });
+        if (!user) {
+          throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+        }
+        html = `Your OTP code for resetting password is ${otp}. It will expire in 5 minutes.`;
+        break;
+      default:
+        throw new Error('Invalid OTP type');
+    }
+    
+
+    await this.sendMail.sendMail({
+      to: email,
+      subject: 'Your OTP Code',
+      html,
+    });
+    return { message: 'OTP sent to email' };
+  }
+
+  async resetPassword(request: ResetPasswordDto) {
+    let { email, password, otp } = request;
+
+    this.emailOtpService.verifyOtp(email, otp.toString());
+
+    let user = await this.prisma.users.findUnique({
+      where: { email_account_type: { email, account_type: 'EMAIL' } },
+    });
+
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    user = await this.prisma.users.update({
+      where: { id: user.id },
+      data: { password: await bcrypt.hash(password, 10) },
+    });
     return { token: await generateToken(user) };
   }
 }
