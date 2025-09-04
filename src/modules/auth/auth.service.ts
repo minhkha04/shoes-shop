@@ -161,4 +161,15 @@ export class AuthService {
     });
     return { token: await generateToken(user) };
   }
+
+  async introspect(token: string) {
+    try {
+      this.jwtService.verify(token, {
+        secret: this.configService.get<string>('SECRET_KEY'),
+      });
+      return { isValid: true };
+    } catch (e) {
+      return { isValid: false };
+    }
+  }
 }

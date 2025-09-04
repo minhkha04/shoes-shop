@@ -22,7 +22,7 @@ async function bootstrap() {
 
   app.enableCors();
   app.use(express.static("."))
-  app.setGlobalPrefix(prefix);
+  app.setGlobalPrefix(prefix, {exclude: ['api']});
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
   }));

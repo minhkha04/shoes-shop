@@ -61,4 +61,10 @@ export class AuthController {
   resetPassword(@Body() request: ResetPasswordDto) {
     return this.authService.resetPassword(request);
   }
+
+  @HttpCode(200)
+  @Get('introspect/:token')
+  introspect(@Param('token') token: string) {
+    return this.authService.introspect(token);
+  }
 }
