@@ -8,13 +8,17 @@ datasource db {
 }
 
 model users {
-  id           String             @id @default(dbgenerated("(uuid())")) @db.Char(36)
-  email        String             @db.VarChar(50)
-  password     String?            @db.VarChar(255)
-  role         users_role
-  account_type users_account_type
-  fullName     String             @db.VarChar(50)
-  avatarUrl    String?            @db.VarChar(2048)
+  id            String             @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  email         String             @db.VarChar(50)
+  password      String?            @db.VarChar(255)
+  role          users_role
+  account_type  users_account_type
+  fullName      String             @db.VarChar(50)
+  avatarUrl     String?            @db.VarChar(2048)
+  date_of_birth DateTime?          @db.Date
+  address       String?            @db.VarChar(255)
+  sex           String?            @db.VarChar(10)
+  phone_number  String?            @db.VarChar(20)
 
   @@unique([email, account_type], map: "uniq_email_account_type")
 }
