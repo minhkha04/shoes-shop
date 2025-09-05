@@ -1,6 +1,6 @@
 import { email_otp } from './../../../node_modules/.prisma/client/index.d';
 import { HttpException, Injectable } from '@nestjs/common';
-import { generateOtp } from '../auth/helper/util';
+import { generateOtp } from '../../helper/util';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 

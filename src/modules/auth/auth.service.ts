@@ -1,17 +1,17 @@
-import { Provider } from './enums/provider.enum';
+import { Provider } from '../../enums/provider.enum';
 import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { SiginInDto } from './dto/sigin-in.dto';
 import { SignUpDto } from './dto/sigin-up.dto';
 import * as bcrypt from 'bcrypt';
-import { generateToken } from './helper/util';
+import { generateToken } from '../../helper/util';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { SendMailService } from '../send-mail/send-mail.service';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { EmailOtpService } from '../email-otp/email-otp.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { OtpType } from './enums/otpType.enum';
+import { OtpType } from '../../enums/otpType.enum';
 import { OAuth2Client } from 'google-auth-library';
 import axios from 'axios';
 

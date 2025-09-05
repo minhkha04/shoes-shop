@@ -2,15 +2,12 @@ import { Controller, Post, Body, Query, ParseEnumPipe, HttpCode, Get, UseGuards,
 import { AuthService } from './auth.service';
 import { SiginInDto } from './dto/sigin-in.dto';
 import { SignUpDto } from './dto/sigin-up.dto';
-import { Provider } from './enums/provider.enum';
+import { Provider } from '../../enums/provider.enum';
 import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { Role } from './enums/roles.enum';
-import { Roles } from './decorators/roles.decorator';
-import { RolesGuard } from './config/roles.guard';
 import { SendMailService } from '../send-mail/send-mail.service';
 import { SendOtpDto } from './dto/send-otp.dto';
-import { OtpType } from './enums/otpType.enum';
+import { OtpType } from '../../enums/otpType.enum';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 
 
