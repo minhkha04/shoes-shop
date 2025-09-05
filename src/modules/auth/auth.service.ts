@@ -11,7 +11,7 @@ import { SendMailService } from '../send-mail/send-mail.service';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { EmailOtpService } from '../email-otp/email-otp.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { OtpType } from '../../enums/otpType.enum';
+import { OtpType } from '../../enums/otp-type.enum';
 import { OAuth2Client } from 'google-auth-library';
 import axios from 'axios';
 

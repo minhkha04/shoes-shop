@@ -19,6 +19,7 @@ model users {
   address       String?            @db.VarChar(255)
   sex           String?            @db.VarChar(10)
   phone_number  String?            @db.VarChar(20)
+  images        images[]
 
   @@unique([email, account_type], map: "uniq_email_account_type")
 }
@@ -27,6 +28,17 @@ model email_otp {
   email        String    @id @db.VarChar(50)
   otp          String?   @db.VarChar(255)
   expired_time DateTime? @db.DateTime(0)
+}
+
+model images {
+  id          String              @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  public_id   String              @db.VarChar(255)
+  url         String              @db.VarChar(2048)
+  uploaded_by String?             @db.Char(36)
+  upload_type images_upload_type?
+  users       users?              @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "fk_images_users")
+
+  @@index([uploaded_by], map: "fk_images_users")
 }
 
 enum users_role {
@@ -40,4 +52,10 @@ enum users_account_type {
   EMAIL
   GOOGLE
   FACEBOOK
+}
+
+enum images_upload_type {
+  PRODUCT
+  AVATAR
+  BRAND
 }

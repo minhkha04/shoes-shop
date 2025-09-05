@@ -10,6 +10,7 @@ import { UsersModule } from './modules/users/users.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PrismaClient } from '@prisma/client';
 import { ApplicationInit } from './config/application-init';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ApplicationInit } from './config/application-init';
     EmailOtpModule,
     UsersModule,
     AdminModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService , JwtStrategy, PrismaClient, ApplicationInit],

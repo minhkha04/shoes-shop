@@ -7,7 +7,7 @@ import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { SendMailService } from '../send-mail/send-mail.service';
 import { SendOtpDto } from './dto/send-otp.dto';
-import { OtpType } from '../../enums/otpType.enum';
+import { OtpType } from '../../enums/otp-type.enum';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 
 
