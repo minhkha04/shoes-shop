@@ -7,6 +7,9 @@ import { JwtStrategy } from './modules/auth/strategy/jwt.strategy';
 import { SendMailModule } from './modules/send-mail/send-mail.module';
 import { EmailOtpModule } from './modules/email-otp/email-otp.module';
 import { UsersModule } from './modules/users/users.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { PrismaClient } from '@prisma/client';
+import { ApplicationInit } from './config/application-init';
 
 @Module({
   imports: [
@@ -15,8 +18,9 @@ import { UsersModule } from './modules/users/users.module';
     SendMailModule,
     EmailOtpModule,
     UsersModule,
+    AdminModule,
   ],
   controllers: [AppController],
-  providers: [AppService , JwtStrategy],
+  providers: [AppService , JwtStrategy, PrismaClient, ApplicationInit],
 })
 export class AppModule { }

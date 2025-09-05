@@ -39,15 +39,6 @@ export class AuthController {
     return this.authService.refreshToken(token);
   }
 
-  @ApiBearerAuth()
-  @Get('test')
-  @Roles(Role.USER)
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  async test() {
-    return "test";
-  }
-
-
   @HttpCode(200)
   @Post('send-otp')
   @ApiQuery({ name: 'otpType', enum: OtpType, required: true })
