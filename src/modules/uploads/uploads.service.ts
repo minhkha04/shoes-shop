@@ -12,71 +12,189 @@ export class UploadsService {
         private readonly prisma: PrismaClient,
     ) { }
 
-    async uploadImage(file: Express.Multer.File, uploadType: UploadType, id: string, userId: string) {
+
+    private async uploadCloduddinary(file: Express.Multer.File, publicId: string, uploadType: UploadType) {
+        return await new Promise<any>((resolve, reject) => {
+            const stream = this.cloudinary.uploader.upload_stream(
+                {
+                    public_id: publicId,
+                    overwrite: true,
+                    resource_type: 'image',
+                    invalidate: true,
+                    folder: `shoes-shop/${uploadType}`, // tùy chọn, xóa nếu không muốn folder
+                },
+                (err, result) => (err ? reject(err) : resolve(result)),
+            );
+            stream.end(file.buffer);
+        });
+    }
+
+    private async deleteImage(publicId: string) {
+        return await this.cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+    }
+
+    async uploadImage(file: Express.Multer.File, uploadType: UploadType, id: string = '') {
         if (!file) throw new BadRequestException('Missing file');
         if (!file.mimetype?.startsWith('image/')) {
             throw new BadRequestException('Image only');
         }
 
         let publicId: string = randomUUID();
+        if (!id) {
+            let upload = await this.uploadCloduddinary(file, publicId, uploadType);
+            await this.prisma.cloudinary.create({
+                data: {
+                    public_id: upload.public_id,
+                    url: upload.secure_url,
+                }
+            });
+            return { message: 'Upload image success', url: upload.secure_url, public_id: upload.public_id };
+        }
 
+        if (uploadType === UploadType.PRODUCT) {
+            let product_colors = await this.prisma.product_colors.findFirst({
+                where: { id },
+            });
+
+            if (!product_colors) throw new BadRequestException('Product color not found');
+
+            let upload = await this.uploadCloduddinary(file, publicId, uploadType);
+
+            await this.prisma.cloudinary.create({
+                data: {
+                    public_id: upload.public_id,
+                    url: upload.secure_url,
+                }
+            });
+
+            let image = await this.prisma.product_colors_image.create({
+                data: {
+                    product_colors_id: id,
+                    image: upload.secure_url,
+                }
+            });
+            return { message: 'Upload image success', image };
+        }
+
+
+
+        let cloudinaryStogare: any;
         if (uploadType === UploadType.AVATAR) {
-            publicId = id;
+            let user = await this.prisma.users.findFirst({
+                where: { id },
+            });
+            if (!user) throw new BadRequestException('User not found');
+            cloudinaryStogare = user.avatarUrl
+                ? await this.prisma.cloudinary.findFirst({
+                    where: { url: user.avatarUrl },
+                })
+                : null;
+        } else if (uploadType === UploadType.BRAND) {
+            let brand = await this.prisma.brands.findFirst({
+                where: { id },
+            });
+            if (!brand) throw new BadRequestException('Brand not found');
+            cloudinaryStogare = brand.image
+                ? await this.prisma.cloudinary.findFirst({
+                    where: { url: brand.image },
+                })
+                : null;
+        } else if (uploadType === UploadType.PRODUCT_MAIN) {
+            let product = await this.prisma.products.findFirst({
+                where: { id }
+            });
+            if (!product) throw new BadRequestException('Product not found');
+            cloudinaryStogare = product.image_main
+                ? await this.prisma.cloudinary.findFirst({
+                    where: { url: product.image_main },
+                })
+                : null;
+        } else if (uploadType === UploadType.PRODUCT_HOVER) {
+            let product = await this.prisma.products.findFirst({
+                where: { id }
+            });
+            if (!product) throw new BadRequestException('Product not found');
+            cloudinaryStogare = product.image_hover
+                ? await this.prisma.cloudinary.findFirst({
+                    where: { url: product.image_hover },
+                })
+                : null;
         }
 
-        const res = await new Promise<any>((resolve, reject) => {
-            const stream = this.cloudinary.uploader.upload_stream(
-                {
-                    public_id: publicId,
-                    overwrite: true,
-                    resource_type: 'image',
-                    folder: 'app/uploads', // tùy chọn, xóa nếu không muốn folder
-                },
-                (err, result) => (err ? reject(err) : resolve(result)),
-            );
-            stream.end(file.buffer);
-        });
-
-
-        switch (uploadType) {
-            case UploadType.AVATAR:
-                let user = await this.prisma.users.findUnique({ where: { id } });
-
-                if (!user) {
-                    this.deleteImage(res.public_id);
-                    throw new BadRequestException('User not found');
+        let urlNew = '';
+        if (cloudinaryStogare) {
+            let upload = await this.uploadCloduddinary(file, cloudinaryStogare.public_id, uploadType);
+            await this.deleteImage(cloudinaryStogare.public_id);
+            await this.prisma.cloudinary.update({
+                where: { id: cloudinaryStogare.id },
+                data: { url: upload.secure_url },
+            });
+            urlNew = upload.secure_url;
+        } else {
+            let upload = await this.uploadCloduddinary(file, publicId, uploadType);
+            await this.prisma.cloudinary.create({
+                data: {
+                    public_id: upload.public_id,
+                    url: upload.secure_url,
                 }
-
-                await this.prisma.users.update({ where: { id }, data: { avatarUrl: res.secure_url } });
-
-                let image = await this.prisma.images.findFirst({ where: { public_id: res.public_id, upload_type: uploadType } });
-
-                if (!image) {
-                    await this.prisma.images.create({
-                        data: { public_id: res.public_id, url: res.secure_url, upload_type: uploadType, uploaded_by: userId },
-                    });
-                } else {
-                    await this.prisma.images.update({
-                        where: { id: image.id },
-                        data: { url: res.secure_url, uploaded_by: userId },
-                    });
-                }
-
-
-                break;
-            case UploadType.PRODUCT:
-                break;
-            case UploadType.BRAND:
-                break;
-            case UploadType.OTHER:
-                break;
-            default:
-                throw new BadRequestException('Invalid uploadType');
+            });
+            urlNew = upload.secure_url;
         }
-        return { message: 'Upload image successfully' };
+        if (uploadType === UploadType.AVATAR) {
+            let user = await this.prisma.users.update({
+                where: { id },
+                data: { avatarUrl: urlNew },
+            });
+            return { user };
+        } else if (uploadType === UploadType.BRAND) {
+            let brand = await this.prisma.brands.update({
+                where: { id },
+                data: { image: urlNew },
+            });
+            return { brand };
+        } else if (uploadType === UploadType.PRODUCT_MAIN) {
+            let product = await this.prisma.products.update({
+                where: { id },
+                data: { image_main: urlNew },
+            });
+            return { product };
+        } else if (uploadType === UploadType.PRODUCT_HOVER) {
+            let product = await this.prisma.products.update({
+                where: { id },
+                data: { image_hover: urlNew },
+            });
+            return { product };
+        }
     }
 
-    async deleteImage(publicId: string) {
-        return await this.cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+    async deleteImagePublic(publicId: string) {
+        await this.prisma.cloudinary.deleteMany({
+            where: { public_id: publicId }
+        });
+        return await this.deleteImage(publicId);
+    }
+
+    async deleteProductImage(id: string) {
+        let productImage = await this.prisma.product_colors_image.findFirst({
+            where: { id }
+        });
+        if (!productImage) throw new BadRequestException('Product image not found');
+
+        let cloudinary = productImage.image && await this.prisma.cloudinary.findFirst({
+            where: { url: productImage.image }
+        });
+
+        if (cloudinary) {
+            await this.deleteImage(cloudinary.public_id);
+            await this.prisma.cloudinary.deleteMany({
+                where: { id: cloudinary.id }
+            });
+        }
+        
+        await this.prisma.product_colors_image.delete({
+            where: { id }
+        });
+        return { message: 'Delete product image success' };
+
     }
 }

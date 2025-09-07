@@ -69,8 +69,6 @@ export class AuthService {
     const fullName = payload.name ?? '';
     const picture = payload.picture;
 
-    console.log(picture)
-
     let user = await this.prisma.users.findUnique({
       where: { email_account_type: { email, account_type: 'GOOGLE' } },
     });
@@ -157,7 +155,7 @@ export class AuthService {
   }
 
   async signUp(request: SignUpDto) {
-    let { email, password, fullName, otp } = request;
+    let { email, password, fullName, otp, avatarUrl } = request;
     let userExist = await this.prisma.users.findUnique({
       where: { email_account_type: { email: email, account_type: 'EMAIL' } },
     });
@@ -175,6 +173,7 @@ export class AuthService {
         fullName: fullName,
         account_type: 'EMAIL',
         role: 'USER',
+        avatarUrl,
       },
     });
 

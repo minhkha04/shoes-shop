@@ -21,7 +21,6 @@ export class SendMailService {
             subject,
             html,
         });
-        console.log(data);
         if (error) {
             console.log(error);
             throw new HttpException('Internal Server', 500);

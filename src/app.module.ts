@@ -11,6 +11,9 @@ import { AdminModule } from './modules/admin/admin.module';
 import { PrismaClient } from '@prisma/client';
 import { ApplicationInit } from './config/application-init';
 import { UploadsModule } from './modules/uploads/uploads.module';
+import { BrandsModule } from './modules/brands/brands.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { ProductsModule } from './modules/products/products.module';
 
 @Module({
   imports: [
@@ -21,6 +24,9 @@ import { UploadsModule } from './modules/uploads/uploads.module';
     UsersModule,
     AdminModule,
     UploadsModule,
+    BrandsModule,
+    CategoriesModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService , JwtStrategy, PrismaClient, ApplicationInit],

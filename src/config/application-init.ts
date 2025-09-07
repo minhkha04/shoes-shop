@@ -25,7 +25,7 @@ export class ApplicationInit implements OnApplicationBootstrap {
             create: {
                 email,
                 password,
-                role: 'ADMIN',         
+                role: 'ADMIN',
                 account_type: acct,
                 fullName: 'Administrator',
             },

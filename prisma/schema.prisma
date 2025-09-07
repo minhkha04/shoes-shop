@@ -19,7 +19,6 @@ model users {
   address       String?            @db.VarChar(255)
   sex           String?            @db.VarChar(10)
   phone_number  String?            @db.VarChar(20)
-  images        images[]
 
   @@unique([email, account_type], map: "uniq_email_account_type")
 }
@@ -30,15 +29,81 @@ model email_otp {
   expired_time DateTime? @db.DateTime(0)
 }
 
-model images {
-  id          String              @id @default(dbgenerated("(uuid())")) @db.Char(36)
-  public_id   String              @db.VarChar(255)
-  url         String              @db.VarChar(2048)
-  uploaded_by String?             @db.Char(36)
-  upload_type images_upload_type?
-  users       users?              @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "fk_images_users")
+model brands {
+  id          String     @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  name        String     @unique(map: "name") @db.VarChar(255)
+  description String?    @db.Text
+  isActive    Boolean?   @default(false)
+  image       String?    @db.VarChar(255)
+  products    products[]
+}
 
-  @@index([uploaded_by], map: "fk_images_users")
+model categories {
+  id          String     @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  name        String     @db.VarChar(100)
+  description String?    @db.Text
+  products    products[]
+}
+
+model product_variants {
+  id                String          @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  products_id       String?         @db.Char(36)
+  size              String?         @db.VarChar(10)
+  product_colors_id String?         @db.Char(36)
+  stock             Int?            @default(0)
+  product_colors    product_colors? @relation(fields: [product_colors_id], references: [id], onUpdate: NoAction, map: "fk_product_variants_product_colors")
+  products          products?       @relation(fields: [products_id], references: [id], onUpdate: NoAction, map: "fk_product_variants_products")
+
+  @@index([products_id], map: "fk_product_variants_products")
+  @@index([product_colors_id], map: "fk_product_variants_product_colors")
+}
+
+model products {
+  id               String             @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  name             String             @db.VarChar(255)
+  categories_id    String?            @db.Char(36)
+  description      String?            @db.Text
+  price            Decimal            @db.Decimal(10, 2)
+  created_at       DateTime?          @default(now()) @db.Timestamp(0)
+  brands_id        String?            @db.Char(36)
+  image_main       String?            @db.VarChar(255)
+  image_hover      String?            @db.VarChar(255)
+  isActive         Boolean?           @default(true)
+  product_colors   product_colors[]
+  product_variants product_variants[]
+  brands           brands?            @relation(fields: [brands_id], references: [id], onUpdate: NoAction, map: "fk_products_brands")
+  categories       categories?        @relation(fields: [categories_id], references: [id], onUpdate: NoAction, map: "fk_products_categories")
+
+  @@index([brands_id], map: "fk_products_brands")
+  @@index([categories_id], map: "fk_products_categories")
+}
+
+model product_colors {
+  id                   String                 @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  color                String                 @db.VarChar(50)
+  code                 String                 @db.VarChar(20)
+  products_id          String?                @db.Char(36)
+  products             products?              @relation(fields: [products_id], references: [id], onUpdate: NoAction, map: "fk_product_colors_products")
+  product_colors_image product_colors_image[]
+  product_variants     product_variants[]
+
+  @@index([products_id], map: "fk_product_colors_products")
+}
+
+model cloudinary {
+  id        String @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  public_id String @db.VarChar(255)
+  url       String @db.VarChar(255)
+}
+
+model product_colors_image {
+  id                String          @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  product_colors_id String?         @db.Char(36)
+  image             String?         @db.VarChar(255)
+  create_at         DateTime?       @default(now()) @db.Timestamp(0)
+  product_colors    product_colors? @relation(fields: [product_colors_id], references: [id], onUpdate: NoAction, map: "fk_product_colors_image_product_colors")
+
+  @@index([product_colors_id], map: "fk_product_colors_image_product_colors")
 }
 
 enum users_role {
@@ -52,10 +117,4 @@ enum users_account_type {
   EMAIL
   GOOGLE
   FACEBOOK
-}
-
-enum images_upload_type {
-  PRODUCT
-  AVATAR
-  BRAND
 }

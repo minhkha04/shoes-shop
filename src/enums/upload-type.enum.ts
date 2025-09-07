@@ -2,5 +2,6 @@ export enum UploadType {
     AVATAR = 'AVATAR',
     PRODUCT = 'PRODUCT',
     BRAND = 'BRAND',
-    OTHER = 'OTHER',
+    PRODUCT_MAIN = 'PRODUCT_MAIN',
+    PRODUCT_HOVER = 'PRODUCT_HOVER'
 }

@@ -40,7 +40,6 @@ export class AuthController {
   @Post('send-otp')
   @ApiQuery({ name: 'otpType', enum: OtpType, required: true })
   sendOtp(@Body() request: SendOtpDto, @Query('otpType') otpType: OtpType) {
-    console.log(otpType);
     return this.authService.sendOtp(request, otpType);
   }
 

@@ -21,4 +21,7 @@ export class SignUpDto {
     @IsNotEmpty({ message: 'OTP is required' })
     @ApiProperty()
     otp: number;
+
+    @ApiProperty({ required: false })
+    avatarUrl?: string;
 }

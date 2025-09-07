@@ -15,7 +15,7 @@ export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) { }
 
   @HttpCode(200)
-  @Post('/image/:id')
+  @Post('/image')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -25,19 +25,41 @@ export class UploadsController {
   @ApiBody({ type: FileUploadDto })
   @ApiConsumes('multipart/form-data')
   @ApiQuery({ name: 'uploadType', enum: UploadType, required: true })
-  @UseGuards(AuthGuard('jwt'))
+  @ApiQuery({ name: 'id', required: false, type: String })
   @ApiBearerAuth()
-  uploadImage(@UploadedFile() file: Express.Multer.File, @Query('uploadType') uploadType: UploadType, @Param('id') id: string, @Req() req: any) {
-    const userId = req.user.sub;
-    return this.uploadsService.uploadImage(file, uploadType, id, userId);
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.MANAGER, Role.STAFF)
+  uploadImage(@UploadedFile() file: Express.Multer.File, @Query('uploadType') uploadType: UploadType, @Query('id') id: string) {
+    return this.uploadsService.uploadImage(file, uploadType, id);
   }
 
-
-
+  @HttpCode(200)
+  @Post('/avatar')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: Number(process.env.MAX_IMAGE_BYTES || 5 * 1024 * 1024) },
+    }),
+  )
+  @ApiBody({ type: FileUploadDto })
+  @ApiConsumes('multipart/form-data')
+  @ApiQuery({ name: 'id', required: false, type: String })
+  uploadAvatar(@UploadedFile() file: Express.Multer.File, @Query('id') id: string) {
+    return this.uploadsService.uploadImage(file, UploadType.AVATAR, id);
+  }
 
   @Delete('/image/:publicId')
   @HttpCode(200)
   async deleteImage(@Param('publicId') publicId: string) {
-    return this.uploadsService.deleteImage(publicId);
+    return this.uploadsService.deleteImagePublic(publicId)
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.MANAGER, Role.STAFF)
+  @Delete('/image/product/:id')
+  @HttpCode(200)
+  async deleteImageProduct(@Param('id') id: string) {
+    return this.uploadsService.deleteProductImage(id)
   }
 }
